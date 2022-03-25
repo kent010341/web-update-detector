@@ -2,6 +2,7 @@ import sys
 import os
 from configparser import ConfigParser
 import requests
+from bs4 import BeautifulSoup
 import smtplib
 
 CFG_PATH = './settings.cfg'
@@ -23,8 +24,11 @@ def read_cfg():
 
     return cfg[CFG_DEFAULT]
 
-def crawler(url):
-    return requests.get(url).content
+def get_web_body(url):
+    html = requests.get(url).text
+    soup = BeautifulSoup(html, features='html.parser')
+
+    return str(soup.find('body'))
 
 def compare(content):
     if os.path.exists(PRE_RESULT_PATH):
@@ -45,14 +49,15 @@ def send_email(sender_account, sender_password, receiver_account):
 def main():
     argv_parser(sys.argv)
     settings = read_cfg()
-    content = crawler(settings[CFG_TARGET_URL])
+    body = get_web_body(settings[CFG_TARGET_URL])
 
-    if not compare(content):
+    if not compare(body):
         send_email(
             sender_account=settings[CFG_SENDER_ACCOUNT],
             sender_password=settings[CFG_SENDER_PASSWD],
             receiver_account=settings[CFG_RECEIVER_ACCOUNT]
         )
+    overwrite(body)
 
 if __name__ == '__main__':
     main()
